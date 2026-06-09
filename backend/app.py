@@ -1,7 +1,4 @@
-from flask import Flask
-from flask import jsonify
-from flask import request
-
+from flask import Flask, jsonify, request
 from flask_cors import CORS
 
 app = Flask(__name__)
@@ -12,8 +9,11 @@ from predictor import (
     predict_matchup
 )
 
-app = Flask(__name__)
-
+@app.route("/")
+def home():
+    return {
+        "message": "NBA Historical Simulator API Running"
+    }
 
 @app.route("/teams")
 def get_teams():
@@ -25,7 +25,6 @@ def get_teams():
     )
 
     return jsonify(teams)
-
 
 @app.route("/predict", methods=["POST"])
 def predict():
@@ -41,7 +40,6 @@ def predict():
     )
 
     return jsonify(result)
-
 
 if __name__ == "__main__":
 

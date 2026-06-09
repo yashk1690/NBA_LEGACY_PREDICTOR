@@ -1,104 +1,108 @@
-const API =
-    "http://127.0.0.1:5000";
+const API = "http://127.0.0.1:5000";
+
+// All display names from the API e.g. "2022-23 | Los Angeles Lakers"
+let allTeams = [];
 
 
-async function loadTeams(){
+function populateSelect(id, options) {
 
-    const response =
-        await fetch(
-            `${API}/teams`
-        );
+    const select = document.getElementById(id);
+    const previous = select.value;
 
-    const teams =
-        await response.json();
+    select.innerHTML = "";
 
-    const teamA =
-        document.getElementById(
-            "teamA"
-        );
-
-    const teamB =
-        document.getElementById(
-            "teamB"
-        );
-
-    teams.forEach(team => {
-
-        let optionA =
-            document.createElement(
-                "option"
-            );
-
-        optionA.value = team;
-        optionA.text = team;
-
-        teamA.appendChild(optionA);
-
-        let optionB =
-            document.createElement(
-                "option"
-            );
-
-        optionB.value = team;
-        optionB.text = team;
-
-        teamB.appendChild(optionB);
-
+    options.forEach(opt => {
+        const el = document.createElement("option");
+        el.value = opt;
+        el.text = opt;
+        select.appendChild(el);
     });
+
+    // Restore previous selection if it's still valid
+    if (options.includes(previous)) {
+        select.value = previous;
+    }
 }
 
 
-async function predictMatchup(){
+function filterTeams(side) {
 
-    const teamA =
-        document.getElementById(
-            "teamA"
-        ).value;
+    const year = document.getElementById(`year${side}`).value;
 
-    const teamB =
-        document.getElementById(
-            "teamB"
-        ).value;
+    const validTeams = allTeams
+        .filter(t => t.startsWith(year + " | "))
+        .map(t => t.split(" | ")[1])
+        .sort();
 
-    const response =
-        await fetch(
-            `${API}/predict`,
-            {
-                method:"POST",
+    populateSelect(`team${side}`, validTeams);
+}
 
-                headers:{
-                    "Content-Type":
-                    "application/json"
-                },
 
-                body:JSON.stringify({
-                    team_a:teamA,
-                    team_b:teamB
-                })
-            }
-        );
+async function loadTeams() {
 
-    const data =
-        await response.json();
+    const response = await fetch(`${API}/teams`);
+    allTeams = await response.json();
 
-    document.getElementById(
-        "result"
-    ).innerHTML = `
+    // Extract unique years, most recent first
+    const years = [
+        ...new Set(allTeams.map(t => t.split(" | ")[0]))
+    ].sort().reverse();
 
-    <h2>${data.team_a}</h2>
+    populateSelect("yearA", years);
+    populateSelect("yearB", years);
 
-    <p>
-        Win Probability:
-        ${(data.team_a_win_probability * 100).toFixed(2)}%
-    </p>
+    // Populate teams for initial year selection
+    filterTeams("A");
+    filterTeams("B");
 
-    <h2>${data.team_b}</h2>
+    // Cascade: re-filter teams when year changes
+    document.getElementById("yearA")
+        .addEventListener("change", () => filterTeams("A"));
 
-    <p>
-        Win Probability:
-        ${(data.team_b_win_probability * 100).toFixed(2)}%
-    </p>
+    document.getElementById("yearB")
+        .addEventListener("change", () => filterTeams("B"));
+}
 
+
+async function predictMatchup() {
+
+    const yearA = document.getElementById("yearA").value;
+    const teamA = document.getElementById("teamA").value;
+    const yearB = document.getElementById("yearB").value;
+    const teamB = document.getElementById("teamB").value;
+
+    // Reconstruct display names the API expects
+    const displayA = `${yearA} | ${teamA}`;
+    const displayB = `${yearB} | ${teamB}`;
+
+    const response = await fetch(
+        `${API}/predict`,
+        {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                team_a: displayA,
+                team_b: displayB
+            })
+        }
+    );
+
+    const data = await response.json();
+
+    const probA = (data.team_a_win_probability * 100).toFixed(1);
+    const probB = (data.team_b_win_probability * 100).toFixed(1);
+
+    document.getElementById("result").innerHTML = `
+        <div class="result-row">
+            <div class="result-card">
+                <h2>${displayA}</h2>
+                <div class="prob">${probA}%</div>
+            </div>
+            <div class="result-card">
+                <h2>${displayB}</h2>
+                <div class="prob">${probB}%</div>
+            </div>
+        </div>
     `;
 }
 
