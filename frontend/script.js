@@ -1,6 +1,6 @@
-const API = "http://127.0.0.1:5000";
+// Flask is now serving this file, so use relative URLs
+const API = "";
 
-// All display names from the API e.g. "2022-23 | Los Angeles Lakers"
 let allTeams = [];
 
 
@@ -18,7 +18,6 @@ function populateSelect(id, options) {
         select.appendChild(el);
     });
 
-    // Restore previous selection if it's still valid
     if (options.includes(previous)) {
         select.value = previous;
     }
@@ -27,7 +26,9 @@ function populateSelect(id, options) {
 
 function filterTeams(side) {
 
-    const year = document.getElementById(`year${side}`).value;
+    const year = document.getElementById(
+        `year${side}`
+    ).value;
 
     const validTeams = allTeams
         .filter(t => t.startsWith(year + " | "))
@@ -43,7 +44,6 @@ async function loadTeams() {
     const response = await fetch(`${API}/teams`);
     allTeams = await response.json();
 
-    // Extract unique years, most recent first
     const years = [
         ...new Set(allTeams.map(t => t.split(" | ")[0]))
     ].sort().reverse();
@@ -51,11 +51,9 @@ async function loadTeams() {
     populateSelect("yearA", years);
     populateSelect("yearB", years);
 
-    // Populate teams for initial year selection
     filterTeams("A");
     filterTeams("B");
 
-    // Cascade: re-filter teams when year changes
     document.getElementById("yearA")
         .addEventListener("change", () => filterTeams("A"));
 
@@ -71,39 +69,103 @@ async function predictMatchup() {
     const yearB = document.getElementById("yearB").value;
     const teamB = document.getElementById("teamB").value;
 
-    // Reconstruct display names the API expects
     const displayA = `${yearA} | ${teamA}`;
     const displayB = `${yearB} | ${teamB}`;
 
-    const response = await fetch(
-        `${API}/predict`,
-        {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-                team_a: displayA,
-                team_b: displayB
-            })
+    const btn = document.querySelector("button");
+    btn.textContent = "Simulating...";
+    btn.disabled = true;
+
+    try {
+
+        const response = await fetch(
+            `${API}/predict`,
+            {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    team_a: displayA,
+                    team_b: displayB
+                })
+            }
+        );
+
+        if (!response.ok) {
+            const err = await response.json();
+            document.getElementById("result").innerHTML =
+                `<p style="color:#e74c3c;">
+                    Error: ${err.error || "Something went wrong"}
+                </p>`;
+            return;
         }
-    );
 
-    const data = await response.json();
+        const data = await response.json();
 
-    const probA = (data.team_a_win_probability * 100).toFixed(1);
-    const probB = (data.team_b_win_probability * 100).toFixed(1);
+        const probA = (
+            data.team_a_win_probability * 100
+        ).toFixed(1);
 
-    document.getElementById("result").innerHTML = `
-        <div class="result-row">
-            <div class="result-card">
-                <h2>${displayA}</h2>
-                <div class="prob">${probA}%</div>
+        const probB = (
+            data.team_b_win_probability * 100
+        ).toFixed(1);
+
+        const winnerIsA = data.winner === displayA;
+        const winnerShort = data.winner.split(" | ")[1];
+
+        // Build the factor rows (all from the winning team)
+        const factorRows = data.top_factors
+            .map(f => `
+                <div class="factor">
+                    <span class="factor-stat">${f.stat}</span>
+                    <span class="factor-value">+${f.value}</span>
+                </div>
+            `)
+            .join("");
+
+        document.getElementById("result").innerHTML = `
+
+            <div class="result-row">
+
+                <div class="result-card ${winnerIsA ? "winner" : ""}">
+                    <h2>${displayA}</h2>
+                    <div class="prob">${probA}%</div>
+                </div>
+
+                <div class="result-card ${!winnerIsA ? "winner" : ""}">
+                    <h2>${displayB}</h2>
+                    <div class="prob">${probB}%</div>
+                </div>
+
             </div>
-            <div class="result-card">
-                <h2>${displayB}</h2>
-                <div class="prob">${probB}%</div>
+
+            <div class="prob-bar-wrap">
+                <div class="prob-bar">
+                    <div class="prob-bar-a" style="width:${probA}%">
+                        ${probA}%
+                    </div>
+                    <div class="prob-bar-b" style="width:${probB}%">
+                        ${probB}%
+                    </div>
+                </div>
+                <div class="prob-bar-labels">
+                    <span>${displayA}</span>
+                    <span>${displayB}</span>
+                </div>
             </div>
-        </div>
-    `;
+
+            <div class="factors">
+                <h3>Why ${winnerShort} wins</h3>
+                ${factorRows}
+            </div>
+
+        `;
+
+    } finally {
+        btn.textContent = "Simulate Matchup";
+        btn.disabled = false;
+    }
 }
 
 

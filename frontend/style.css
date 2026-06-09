@@ -17,7 +17,8 @@ h1 {
     margin-bottom: 40px;
 }
 
-/* Side-by-side panels */
+/* ── Team selectors ─────────────────────── */
+
 .selectors {
     display: flex;
     align-items: center;
@@ -46,9 +47,7 @@ h1 {
     color: #aaa;
 }
 
-/* Year dropdown — narrow */
-#yearA,
-#yearB {
+#yearA, #yearB {
     width: 100%;
     padding: 8px 10px;
     font-size: 14px;
@@ -59,9 +58,7 @@ h1 {
     cursor: pointer;
 }
 
-/* Team dropdown — full width */
-#teamA,
-#teamB {
+#teamA, #teamB {
     width: 100%;
     padding: 8px 10px;
     font-size: 15px;
@@ -84,6 +81,8 @@ select:focus {
     flex-shrink: 0;
 }
 
+/* ── Simulate button ────────────────────── */
+
 button {
     padding: 12px 32px;
     font-size: 18px;
@@ -98,16 +97,17 @@ button:hover {
     background: #cf6d17;
 }
 
+/* ── Result cards ───────────────────────── */
+
 #result {
     margin-top: 40px;
-    font-size: 22px;
 }
 
 .result-row {
     display: flex;
     justify-content: center;
     gap: 60px;
-    margin-top: 20px;
+    margin-bottom: 28px;
 }
 
 .result-card {
@@ -116,16 +116,116 @@ button:hover {
     border-radius: 10px;
     padding: 20px 30px;
     min-width: 220px;
+    transition: border-color 0.3s;
+}
+
+.result-card.winner {
+    border-color: #e67e22;
 }
 
 .result-card h2 {
-    font-size: 16px;
-    color: #ccc;
+    font-size: 14px;
+    color: #aaa;
     margin: 0 0 8px 0;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
 }
 
 .result-card .prob {
-    font-size: 36px;
+    font-size: 40px;
     font-weight: bold;
     color: #e67e22;
+}
+
+/* ── Probability bar ────────────────────── */
+
+.prob-bar-wrap {
+    max-width: 700px;
+    margin: 0 auto 32px auto;
+}
+
+.prob-bar {
+    display: flex;
+    height: 52px;
+    border-radius: 10px;
+    overflow: hidden;
+    margin-bottom: 10px;
+}
+
+.prob-bar-a {
+    background: #e67e22;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 17px;
+    font-weight: bold;
+    color: white;
+    transition: width 0.6s ease;
+    min-width: 44px;
+}
+
+.prob-bar-b {
+    background: #2c5282;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 17px;
+    font-weight: bold;
+    color: white;
+    transition: width 0.6s ease;
+    min-width: 44px;
+}
+
+.prob-bar-labels {
+    display: flex;
+    justify-content: space-between;
+    font-size: 13px;
+    color: #777;
+    padding: 0 2px;
+}
+
+/* ── Key differences ────────────────────── */
+
+.factors {
+    background: #1a1a1a;
+    border: 1px solid #333;
+    border-radius: 10px;
+    padding: 20px 28px;
+    max-width: 700px;
+    margin: 0 auto 40px auto;
+    text-align: left;
+}
+
+.factors h3 {
+    margin: 0 0 16px 0;
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: #777;
+}
+
+.factor {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 0;
+    border-bottom: 1px solid #2a2a2a;
+}
+
+.factor:last-child {
+    border-bottom: none;
+}
+
+.factor-stat {
+    font-size: 15px;
+    color: #ddd;
+    flex: 1;
+}
+
+.factor-value {
+    font-size: 15px;
+    font-weight: bold;
+    color: #e67e22;
+    flex: 0 0 80px;
+    text-align: right;
 }
