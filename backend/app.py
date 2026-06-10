@@ -16,7 +16,9 @@ CORS(app)
 
 from predictor import (
     profiles,
-    predict_matchup
+    playoff_profiles,
+    predict_matchup,
+    predict_playoff_series
 )
 
 
@@ -33,6 +35,18 @@ def get_teams():
 
     teams = sorted(
         profiles["DISPLAY_NAME"]
+        .unique()
+        .tolist()
+    )
+
+    return jsonify(teams)
+
+
+@app.route("/playoff_teams")
+def get_playoff_teams():
+
+    teams = sorted(
+        playoff_profiles["DISPLAY_NAME"]
         .unique()
         .tolist()
     )
@@ -68,6 +82,36 @@ def predict():
 
     except Exception as e:
         return jsonify({"error": "Prediction failed"}), 500
+
+
+@app.route("/predict_series", methods=["POST"])
+def predict_series():
+
+    try:
+
+        data = request.get_json()
+
+        if (
+            not data
+            or "team_a" not in data
+            or "team_b" not in data
+        ):
+            return jsonify(
+                {"error": "Missing team_a or team_b"}
+            ), 400
+
+        result = predict_playoff_series(
+            data["team_a"],
+            data["team_b"]
+        )
+
+        return jsonify(result)
+
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 404
+
+    except Exception as e:
+        return jsonify({"error": "Series prediction failed"}), 500
 
 
 if __name__ == "__main__":

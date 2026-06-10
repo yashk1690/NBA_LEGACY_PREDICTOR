@@ -1,24 +1,19 @@
 import joblib
+import numpy as np
 import pandas as pd
 
-# -----------------------------
-# Load assets
-# -----------------------------
+# ─────────────────────────────────────────
+# Load regular model
+# ─────────────────────────────────────────
 
 bundle = joblib.load(
     "models/nba_historical_simulator.pkl"
 )
 
-model = bundle["model"]
+model         = bundle["model"]
 feature_order = bundle["features"]
 
-profiles = pd.read_csv(
-    "data/team_profiles_v3.csv"
-)
-
-# -----------------------------
-# Team lookup
-# -----------------------------
+profiles = pd.read_csv("data/team_profiles_v3.csv")
 
 profiles["DISPLAY_NAME"] = (
     profiles["SEASON_STR"]
@@ -26,6 +21,28 @@ profiles["DISPLAY_NAME"] = (
     + profiles["TEAM_NAME"]
 )
 
+# ─────────────────────────────────────────
+# Load playoff model
+# ─────────────────────────────────────────
+
+playoff_bundle = joblib.load(
+    "models/nba_playoff_simulator.pkl"
+)
+
+playoff_model         = playoff_bundle["model"]
+playoff_feature_order = playoff_bundle["features"]
+
+playoff_profiles = pd.read_csv("data/playoff_team_profiles_v3.csv")
+
+playoff_profiles["DISPLAY_NAME"] = (
+    playoff_profiles["SEASON_STR"]
+    + " | "
+    + playoff_profiles["TEAM_NAME"]
+)
+
+# ─────────────────────────────────────────
+# Team lookup
+# ─────────────────────────────────────────
 
 def get_team_profile(display_name):
 
@@ -34,64 +51,74 @@ def get_team_profile(display_name):
     ]
 
     if len(row) == 0:
+        raise ValueError(f"Team not found: {display_name}")
+
+    return row.iloc[0]
+
+
+def get_playoff_team_profile(display_name):
+
+    row = playoff_profiles[
+        playoff_profiles["DISPLAY_NAME"] == display_name
+    ]
+
+    if len(row) == 0:
         raise ValueError(
-            f"Team not found: {display_name}"
+            f"Playoff team not found: {display_name}"
         )
 
     return row.iloc[0]
 
 
-# -----------------------------
-# Matchup creation
-# -----------------------------
+# ─────────────────────────────────────────
+# Feature configuration
+# ─────────────────────────────────────────
 
 FEATURE_MAP = {
-    "fg_pct_matchup_diff":              "fg_pct",
-    "opp_fg_pct_matchup_diff":          "opp_fg_pct",
-    "fg3_pct_matchup_diff":             "fg3_pct",
-    "opp_fg3_pct_matchup_diff":         "opp_fg3_pct",
-    "ft_pct_matchup_diff":              "ft_pct",
-    "reb_matchup_diff":                 "reb",
-    "ast_matchup_diff":                 "ast",
-    "stl_matchup_diff":                 "stl",
-    "blk_matchup_diff":                 "blk",
-    "tov_matchup_diff":                 "tov",
+    "fg_pct_matchup_diff":               "fg_pct",
+    "opp_fg_pct_matchup_diff":           "opp_fg_pct",
+    "fg3_pct_matchup_diff":              "fg3_pct",
+    "opp_fg3_pct_matchup_diff":          "opp_fg3_pct",
+    "ft_pct_matchup_diff":               "ft_pct",
+    "reb_matchup_diff":                  "reb",
+    "ast_matchup_diff":                  "ast",
+    "stl_matchup_diff":                  "stl",
+    "blk_matchup_diff":                  "blk",
+    "tov_matchup_diff":                  "tov",
     "assist_turnover_ratio_matchup_diff": "assist_turnover_ratio",
-    "reb_diff_matchup_diff":            "reb_diff",
-    "ast_diff_matchup_diff":            "ast_diff",
-    "tov_diff_matchup_diff":            "tov_diff",
-    "pace_matchup_diff":                "pace",
-    "ortg_matchup_diff":                "ortg",
-    "drtg_matchup_diff":                "drtg",
-    "efg_pct_matchup_diff":             "efg_pct",
-    "ts_pct_matchup_diff":              "ts_pct"
+    "reb_diff_matchup_diff":             "reb_diff",
+    "ast_diff_matchup_diff":             "ast_diff",
+    "tov_diff_matchup_diff":             "tov_diff",
+    "pace_matchup_diff":                 "pace",
+    "ortg_matchup_diff":                 "ortg",
+    "drtg_matchup_diff":                 "drtg",
+    "efg_pct_matchup_diff":              "efg_pct",
+    "ts_pct_matchup_diff":               "ts_pct"
 }
 
-# Human-readable labels for each feature
 FEATURE_DISPLAY_NAMES = {
-    "fg_pct_matchup_diff":              "Field Goal %",
-    "opp_fg_pct_matchup_diff":          "Opp. Field Goal % (Defense)",
-    "fg3_pct_matchup_diff":             "3-Point %",
-    "opp_fg3_pct_matchup_diff":         "Opp. 3-Point % (Defense)",
-    "ft_pct_matchup_diff":              "Free Throw %",
-    "reb_matchup_diff":                 "Rebounds",
-    "ast_matchup_diff":                 "Assists",
-    "stl_matchup_diff":                 "Steals",
-    "blk_matchup_diff":                 "Blocks",
-    "tov_matchup_diff":                 "Turnovers",
+    "fg_pct_matchup_diff":               "Field Goal %",
+    "opp_fg_pct_matchup_diff":           "Opp. Field Goal % (Defense)",
+    "fg3_pct_matchup_diff":              "3-Point %",
+    "opp_fg3_pct_matchup_diff":          "Opp. 3-Point % (Defense)",
+    "ft_pct_matchup_diff":               "Free Throw %",
+    "reb_matchup_diff":                  "Rebounds",
+    "ast_matchup_diff":                  "Assists",
+    "stl_matchup_diff":                  "Steals",
+    "blk_matchup_diff":                  "Blocks",
+    "tov_matchup_diff":                  "Turnovers",
     "assist_turnover_ratio_matchup_diff": "Assist / Turnover Ratio",
-    "reb_diff_matchup_diff":            "Rebound Margin",
-    "ast_diff_matchup_diff":            "Assist Margin",
-    "tov_diff_matchup_diff":            "Turnover Margin",
-    "pace_matchup_diff":                "Pace",
-    "ortg_matchup_diff":                "Offensive Rating",
-    "drtg_matchup_diff":                "Defensive Rating",
-    "efg_pct_matchup_diff":             "Effective FG %",
-    "ts_pct_matchup_diff":              "True Shooting %"
+    "reb_diff_matchup_diff":             "Rebound Margin",
+    "ast_diff_matchup_diff":             "Assist Margin",
+    "tov_diff_matchup_diff":             "Turnover Margin",
+    "pace_matchup_diff":                 "Pace",
+    "ortg_matchup_diff":                 "Offensive Rating",
+    "drtg_matchup_diff":                 "Defensive Rating",
+    "efg_pct_matchup_diff":              "Effective FG %",
+    "ts_pct_matchup_diff":               "True Shooting %"
 }
 
-# For these stats, lower is better —
-# so a negative differential favours Team A
+# Lower value = better outcome for the team
 LOWER_IS_BETTER = {
     "drtg_matchup_diff",
     "tov_matchup_diff",
@@ -100,8 +127,7 @@ LOWER_IS_BETTER = {
     "opp_fg3_pct_matchup_diff"
 }
 
-# These are stored as decimals (e.g. 0.48);
-# multiply ×100 to display as percentage points
+# Stored as decimals; multiply ×100 to show as percentage points
 PCT_FEATURES = {
     "fg_pct_matchup_diff",
     "opp_fg_pct_matchup_diff",
@@ -113,24 +139,56 @@ PCT_FEATURES = {
 }
 
 
+# ─────────────────────────────────────────
+# Feature vector builders
+# ─────────────────────────────────────────
+
 def build_feature_vector(team_a, team_b):
+    """Regular model — uses explicit FEATURE_MAP."""
 
     features = {}
 
-    for matchup_feature, profile_col in FEATURE_MAP.items():
-
-        features[matchup_feature] = (
+    for matchup_feat, profile_col in FEATURE_MAP.items():
+        features[matchup_feat] = (
             float(team_a[profile_col])
-            -
-            float(team_b[profile_col])
+            - float(team_b[profile_col])
         )
 
     return features
 
 
-# -----------------------------
+def build_dynamic_feature_vector(team_a, team_b, feat_order):
+    """
+    Playoff model — derives column name by stripping
+    '_matchup_diff', so it works with any extra features
+    the playoff model was trained on.
+    """
+
+    features = {}
+
+    for feat in feat_order:
+        col = feat.replace("_matchup_diff", "")
+        try:
+            features[feat] = (
+                float(team_a[col]) - float(team_b[col])
+            )
+        except (KeyError, ValueError):
+            features[feat] = 0.0
+
+    return features
+
+
+# ─────────────────────────────────────────
 # Top factors
-# -----------------------------
+# ─────────────────────────────────────────
+
+def clean_feature_name(feat):
+    return (
+        feat.replace("_matchup_diff", "")
+            .replace("_", " ")
+            .title()
+    )
+
 
 def get_top_factors(
     feature_vector,
@@ -140,8 +198,8 @@ def get_top_factors(
     n=5
 ):
     """
-    Return the n stats where the winning team holds the largest
-    advantages over their opponent.
+    Top n stats where the predicted winner holds the
+    largest advantage, sorted by absolute differential.
     """
 
     factors = []
@@ -152,8 +210,7 @@ def get_top_factors(
 
         team_a_favored = (
             (value > 0 and not lower_is_better)
-            or
-            (value < 0 and lower_is_better)
+            or (value < 0 and lower_is_better)
         )
 
         if feat in PCT_FEATURES:
@@ -164,18 +221,18 @@ def get_top_factors(
         advantage = team_a_name if team_a_favored else team_b_name
 
         factors.append({
-            "stat":      FEATURE_DISPLAY_NAMES.get(feat, feat),
+            "stat":      FEATURE_DISPLAY_NAMES.get(
+                             feat, clean_feature_name(feat)
+                         ),
             "value":     display_value,
             "advantage": advantage,
             "_abs":      abs(value)
         })
 
-    # Sort by magnitude, then keep only the winning team's edges
     factors.sort(key=lambda x: x["_abs"], reverse=True)
 
     winning_factors = [
-        f for f in factors
-        if f["advantage"] == winner
+        f for f in factors if f["advantage"] == winner
     ]
 
     return [
@@ -184,39 +241,135 @@ def get_top_factors(
     ]
 
 
-# -----------------------------
-# Prediction
-# -----------------------------
+# ─────────────────────────────────────────
+# Single game prediction (10,000 simulations)
+# ─────────────────────────────────────────
 
-def predict_matchup(team_a_name, team_b_name):
+def predict_matchup(
+    team_a_name,
+    team_b_name,
+    n_simulations=10_000
+):
 
     team_a = get_team_profile(team_a_name)
     team_b = get_team_profile(team_b_name)
 
-    feature_vector = build_feature_vector(
-        team_a,
-        team_b
-    )
+    feature_vector = build_feature_vector(team_a, team_b)
 
-    X = pd.DataFrame([feature_vector])
-    X = X[feature_order]
+    X = pd.DataFrame([feature_vector])[feature_order]
 
-    prob = model.predict_proba(X)[0, 1]
+    prob = float(model.predict_proba(X)[0, 1])
+
+    # Monte-Carlo game simulations
+    rng = np.random.default_rng()
+    sim_wins_a = int(np.sum(rng.random(n_simulations) < prob))
 
     winner = team_a_name if prob >= 0.5 else team_b_name
 
     top_factors = get_top_factors(
-        feature_vector,
-        team_a_name,
-        team_b_name,
-        winner
+        feature_vector, team_a_name, team_b_name, winner
     )
 
     return {
-        "team_a":                   team_a_name,
-        "team_b":                   team_b_name,
-        "team_a_win_probability":   float(prob),
-        "team_b_win_probability":   float(1 - prob),
-        "winner":                   winner,
-        "top_factors":              top_factors
+        "team_a":                 team_a_name,
+        "team_b":                 team_b_name,
+        "team_a_win_probability": float(prob),
+        "team_b_win_probability": float(1 - prob),
+        "team_a_sim_wins":        sim_wins_a,
+        "team_b_sim_wins":        n_simulations - sim_wins_a,
+        "total_simulations":      n_simulations,
+        "winner":                 winner,
+        "top_factors":            top_factors
+    }
+
+
+# ─────────────────────────────────────────
+# Playoff series prediction (10,000 series)
+# ─────────────────────────────────────────
+
+def predict_playoff_series(
+    team_a_name,
+    team_b_name,
+    n_simulations=10_000
+):
+
+    team_a = get_playoff_team_profile(team_a_name)
+    team_b = get_playoff_team_profile(team_b_name)
+
+    feature_vector = build_dynamic_feature_vector(
+        team_a, team_b, playoff_feature_order
+    )
+
+    X = pd.DataFrame([feature_vector])[playoff_feature_order]
+
+    game_prob = float(playoff_model.predict_proba(X)[0, 1])
+
+    # ── Simulate 10,000 best-of-7 series ──────────────
+
+    rng = np.random.default_rng()
+
+    series_wins_a = 0
+    length_counts  = {4: 0, 5: 0, 6: 0, 7: 0}
+    outcome_counts = {}
+
+    for _ in range(n_simulations):
+
+        wa, wb = 0, 0
+
+        while wa < 4 and wb < 4:
+            if rng.random() < game_prob:
+                wa += 1
+            else:
+                wb += 1
+
+        if wa == 4:
+            series_wins_a += 1
+            key = f"4-{wb}"
+        else:
+            key = f"{wa}-4"
+
+        length_counts[wa + wb] += 1
+        outcome_counts[key] = outcome_counts.get(key, 0) + 1
+
+    # ── Format outputs ─────────────────────────────────
+
+    series_prob_a = series_wins_a / n_simulations
+
+    expected_games = sum(
+        g * c / n_simulations
+        for g, c in length_counts.items()
+    )
+
+    length_pcts = {
+        str(g): round(c / n_simulations * 100, 1)
+        for g, c in sorted(length_counts.items())
+    }
+
+    outcome_pcts = {
+        k: round(v / n_simulations * 100, 1)
+        for k, v in sorted(
+            outcome_counts.items(),
+            key=lambda x: -x[1]
+        )
+    }
+
+    winner = team_a_name if series_prob_a >= 0.5 else team_b_name
+
+    top_factors = get_top_factors(
+        feature_vector, team_a_name, team_b_name, winner
+    )
+
+    return {
+        "team_a":              team_a_name,
+        "team_b":              team_b_name,
+        "game_win_prob_a":     round(game_prob * 100, 1),
+        "game_win_prob_b":     round((1 - game_prob) * 100, 1),
+        "series_win_prob_a":   round(series_prob_a * 100, 1),
+        "series_win_prob_b":   round((1 - series_prob_a) * 100, 1),
+        "winner":              winner,
+        "expected_games":      round(expected_games, 1),
+        "length_distribution": length_pcts,
+        "series_outcomes":     outcome_pcts,
+        "total_simulations":   n_simulations,
+        "top_factors":         top_factors
     }

@@ -2,45 +2,87 @@
 <html>
 
 <head>
-
-    <title>
-        NBA Historical Simulator
-    </title>
-
-    <link rel="stylesheet"
-          href="style.css">
-
+    <title>NBA Historical Simulator</title>
+    <link rel="stylesheet" href="style.css">
 </head>
 
 <body>
 
+<div class="topbar">
+    <span class="topbar-title">NBA Historical Simulator</span>
+    <div class="tab-nav">
+        <button class="tab-btn active" id="btn-single"
+                onclick="switchTab('single')">
+            Single Game
+        </button>
+        <button class="tab-btn" id="btn-series"
+                onclick="switchTab('series')">
+            Playoff Series
+        </button>
+    </div>
+</div>
+
 <div class="container">
 
-    <h1>NBA Historical Simulator</h1>
+    <!-- ── Single Game Panel ───────────────────── -->
 
-    <div class="selectors">
+    <div id="panel-single" class="panel active">
 
-        <div class="team-picker">
-            <h3>Team A</h3>
-            <select id="yearA"></select>
-            <select id="teamA"></select>
+        <div class="selectors">
+
+            <div class="team-picker">
+                <h3>Team A</h3>
+                <select id="yearA"></select>
+                <select id="teamA"></select>
+            </div>
+
+            <div class="vs">VS</div>
+
+            <div class="team-picker">
+                <h3>Team B</h3>
+                <select id="yearB"></select>
+                <select id="teamB"></select>
+            </div>
+
         </div>
 
-        <div class="vs">VS</div>
+        <button id="btn-predict" onclick="predictMatchup()">
+            Simulate Matchup
+        </button>
 
-        <div class="team-picker">
-            <h3>Team B</h3>
-            <select id="yearB"></select>
-            <select id="teamB"></select>
-        </div>
+        <div id="result-single"></div>
 
     </div>
 
-    <button onclick="predictMatchup()">
-        Simulate Matchup
-    </button>
+    <!-- ── Playoff Series Panel ─────────────────── -->
 
-    <div id="result"></div>
+    <div id="panel-series" class="panel">
+
+        <div class="selectors">
+
+            <div class="team-picker">
+                <h3>Team A</h3>
+                <select id="playoffYearA"></select>
+                <select id="playoffTeamA"></select>
+            </div>
+
+            <div class="vs">VS</div>
+
+            <div class="team-picker">
+                <h3>Team B</h3>
+                <select id="playoffYearB"></select>
+                <select id="playoffTeamB"></select>
+            </div>
+
+        </div>
+
+        <button id="btn-series-sim" onclick="predictSeries()">
+            Simulate Series
+        </button>
+
+        <div id="result-series"></div>
+
+    </div>
 
 </div>
 
