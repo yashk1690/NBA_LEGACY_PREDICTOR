@@ -5,6 +5,71 @@ let allPlayoffTeams = [];
 
 
 // ─────────────────────────────────────────
+// NBA team color map
+// ─────────────────────────────────────────
+
+const TEAM_COLORS = {
+    // Atlantic
+    "Boston Celtics":           "#007A33",
+    "Brooklyn Nets":            "#AAAAAA",
+    "New York Knicks":          "#F58426",
+    "Philadelphia 76ers":       "#006BB6",
+    "Toronto Raptors":          "#CE1141",
+    // Central
+    "Chicago Bulls":            "#CE1141",
+    "Cleveland Cavaliers":      "#860038",
+    "Detroit Pistons":          "#C8102E",
+    "Indiana Pacers":           "#FDBB30",
+    "Milwaukee Bucks":          "#00471B",
+    // Southeast
+    "Atlanta Hawks":            "#E03A3E",
+    "Charlotte Hornets":        "#00788C",
+    "Miami Heat":               "#F9A01B",
+    "Orlando Magic":            "#0077C0",
+    "Washington Wizards":       "#E31837",
+    // Northwest
+    "Denver Nuggets":           "#FEC524",
+    "Minnesota Timberwolves":   "#236192",
+    "Oklahoma City Thunder":    "#EF3B24",
+    "Portland Trail Blazers":   "#E03A3E",
+    "Utah Jazz":                "#F9A01B",
+    // Pacific
+    "Golden State Warriors":    "#FFC72C",
+    "Los Angeles Clippers":     "#C8102E",
+    "LA Clippers":              "#C8102E",
+    "Los Angeles Lakers":       "#FDB927",
+    "Phoenix Suns":             "#E56020",
+    "Sacramento Kings":         "#5A2D81",
+    // Southwest
+    "Dallas Mavericks":         "#00538C",
+    "Houston Rockets":          "#CE1141",
+    "Memphis Grizzlies":        "#5D76A9",
+    "New Orleans Pelicans":     "#C8102E",
+    "San Antonio Spurs":        "#C4CED4",
+    // Historical
+    "Seattle SuperSonics":      "#00653A",
+    "New Jersey Nets":          "#AAAAAA",
+    "Vancouver Grizzlies":      "#00B2A9",
+    "New Orleans Hornets":      "#00778B",
+    "Charlotte Bobcats":        "#F26522",
+    "New Orleans/Oklahoma City Hornets": "#00778B",
+    "Kansas City Kings":        "#5A2D81",
+    "San Diego Clippers":       "#C8102E",
+    "Washington Bullets":       "#002B5C",
+    "Buffalo Braves":           "#1D428A",
+    "Fort Worth Texans":        "#C8102E",
+    "New Orleans Jazz":         "#002B5C",
+};
+
+function getTeamColor(displayName) {
+    const team = displayName.includes(" | ")
+        ? displayName.split(" | ")[1]
+        : displayName;
+    return TEAM_COLORS[team] || "#C8102E";
+}
+
+
+// ─────────────────────────────────────────
 // Tab switching
 // ─────────────────────────────────────────
 
@@ -38,9 +103,9 @@ function populateSelect(id, options) {
     select.innerHTML = "";
 
     options.forEach(opt => {
-        const el   = document.createElement("option");
-        el.value   = opt;
-        el.text    = opt;
+        const el = document.createElement("option");
+        el.value = opt;
+        el.text  = opt;
         select.appendChild(el);
     });
 
@@ -49,14 +114,22 @@ function populateSelect(id, options) {
     }
 }
 
-function buildProbBar(probA, probB) {
+function buildProbBar(probA, probB, displayA, displayB) {
+
+    const colorA = getTeamColor(displayA);
+    const colorB = getTeamColor(displayB);
+
     return `
-        <div class="prob-bar">
-            <div class="prob-bar-a" style="width:${probA}%">
-                ${probA}%
-            </div>
-            <div class="prob-bar-b" style="width:${probB}%">
-                ${probB}%
+        <div class="prob-bar-frame">
+            <div class="prob-bar">
+                <div class="prob-bar-a"
+                     style="width:${probA}%; background:${colorA}">
+                    ${probA}%
+                </div>
+                <div class="prob-bar-b"
+                     style="width:${probB}%; background:${colorB}">
+                    ${probB}%
+                </div>
             </div>
         </div>
     `;
@@ -78,7 +151,7 @@ function buildFactorRows(topFactors) {
 
 function filterTeams(side) {
 
-    const year      = document.getElementById(`year${side}`).value;
+    const year       = document.getElementById(`year${side}`).value;
     const validTeams = allTeams
         .filter(t => t.startsWith(year + " | "))
         .map(t => t.split(" | ")[1])
@@ -136,7 +209,7 @@ async function predictMatchup() {
         if (!response.ok) {
             const err = await response.json();
             document.getElementById("result-single").innerHTML =
-                `<p style="color:#e74c3c;">
+                `<p style="color:#C8102E; font-weight:900; text-transform:uppercase;">
                     Error: ${err.error || "Something went wrong"}
                 </p>`;
             return;
@@ -149,10 +222,17 @@ async function predictMatchup() {
         const winnerIsA = data.winner === displayA;
         const winnerShort = data.winner.split(" | ")[1];
 
+        const colorA      = getTeamColor(displayA);
+        const colorB      = getTeamColor(displayB);
+        const winnerColor = winnerIsA ? colorA : colorB;
+
         document.getElementById("result-single").innerHTML = `
 
             <div class="result-row">
-                <div class="result-card ${winnerIsA ? "winner" : ""}">
+
+                <div class="result-card ${winnerIsA ? "winner" : ""}"
+                     style="--team-color: ${colorA}">
+                    ${winnerIsA ? '<div class="winner-badge">▲ Predicted Winner</div>' : ""}
                     <h2>${displayA}</h2>
                     <div class="prob">${probA}%</div>
                     <div class="sim-count">
@@ -160,7 +240,10 @@ async function predictMatchup() {
                         ${data.total_simulations.toLocaleString()} wins
                     </div>
                 </div>
-                <div class="result-card ${!winnerIsA ? "winner" : ""}">
+
+                <div class="result-card ${!winnerIsA ? "winner" : ""}"
+                     style="--team-color: ${colorB}">
+                    ${!winnerIsA ? '<div class="winner-badge">▲ Predicted Winner</div>' : ""}
                     <h2>${displayB}</h2>
                     <div class="prob">${probB}%</div>
                     <div class="sim-count">
@@ -168,17 +251,18 @@ async function predictMatchup() {
                         ${data.total_simulations.toLocaleString()} wins
                     </div>
                 </div>
+
             </div>
 
             <div class="prob-bar-wrap">
-                ${buildProbBar(probA, probB)}
+                ${buildProbBar(probA, probB, displayA, displayB)}
                 <div class="prob-bar-labels">
                     <span>${displayA}</span>
                     <span>${displayB}</span>
                 </div>
             </div>
 
-            <div class="factors">
+            <div class="factors" style="--winner-color: ${winnerColor}">
                 <h3>Why ${winnerShort} wins</h3>
                 ${buildFactorRows(data.top_factors)}
             </div>
@@ -197,7 +281,7 @@ async function predictMatchup() {
 
 function filterPlayoffTeams(side) {
 
-    const year      = document.getElementById(`playoffYear${side}`).value;
+    const year       = document.getElementById(`playoffYear${side}`).value;
     const validTeams = allPlayoffTeams
         .filter(t => t.startsWith(year + " | "))
         .map(t => t.split(" | ")[1])
@@ -240,6 +324,10 @@ async function predictSeries() {
     const displayA = `${yearA} | ${teamA}`;
     const displayB = `${yearB} | ${teamB}`;
 
+    const modelId  = parseInt(
+        document.getElementById("playoffModel").value
+    );
+
     const btn = document.getElementById("btn-series-sim");
     btn.textContent = "Simulating 10,000 series…";
     btn.disabled    = true;
@@ -249,13 +337,17 @@ async function predictSeries() {
         const response = await fetch(`${API}/predict_series`, {
             method:  "POST",
             headers: { "Content-Type": "application/json" },
-            body:    JSON.stringify({ team_a: displayA, team_b: displayB })
+            body:    JSON.stringify({
+                team_a:   displayA,
+                team_b:   displayB,
+                model_id: modelId
+            })
         });
 
         if (!response.ok) {
             const err = await response.json();
             document.getElementById("result-series").innerHTML =
-                `<p style="color:#e74c3c;">
+                `<p style="color:#C8102E; font-weight:900; text-transform:uppercase;">
                     Error: ${err.error || "Something went wrong"}
                 </p>`;
             return;
@@ -265,6 +357,10 @@ async function predictSeries() {
 
         const winnerIsA   = data.winner === displayA;
         const winnerShort = data.winner.split(" | ")[1];
+
+        const colorA      = getTeamColor(displayA);
+        const colorB      = getTeamColor(displayB);
+        const winnerColor = winnerIsA ? colorA : colorB;
 
         // ── Series length bars ────────────────────
 
@@ -286,28 +382,33 @@ async function predictSeries() {
             `)
             .join("");
 
-        // ── Series outcome bars ───────────────────
+        // ── Outcome bars (team-colored) ───────────
 
-        const outcomes    = Object.entries(data.series_outcomes).slice(0, 6);
-        const maxOutPct   = Math.max(...outcomes.map(([, v]) => v));
+        const outcomes  = Object.entries(data.series_outcomes).slice(0, 6);
+        const maxOutPct = Math.max(...outcomes.map(([, v]) => v));
 
         const outcomeRows = outcomes.map(([outcome, pct]) => {
 
             const [wA, wB]    = outcome.split("-").map(Number);
-            const outcomeTeam = wA === 4 ? teamA : teamB;
-            const wWins       = wA === 4 ? wA : wB;
-            const lWins       = wA === 4 ? wB : wA;
+            const outcomeIsA  = wA === 4;
+            const teamShort   = (outcomeIsA ? teamA : teamB)
+                                    .split(" ").slice(-1)[0];
+            const fullDisplay = outcomeIsA ? displayA : displayB;
+            const barColor    = getTeamColor(fullDisplay);
+            const wWins       = outcomeIsA ? wA : wB;
+            const lWins       = outcomeIsA ? wB : wA;
 
             return `
                 <div class="outcome-row">
                     <span class="outcome-winner"
-                          title="${outcomeTeam}">
-                        ${outcomeTeam.split(" ").slice(-1)[0]}
+                          title="${outcomeIsA ? teamA : teamB}">
+                        ${teamShort}
                     </span>
                     <span class="outcome-result">${wWins}-${lWins}</span>
                     <div class="outcome-bar-container">
                         <div class="outcome-bar"
-                             style="width:${(pct / maxOutPct * 100).toFixed(1)}%">
+                             style="width:${(pct / maxOutPct * 100).toFixed(1)}%;
+                                    background:${barColor}">
                         </div>
                     </div>
                     <span class="outcome-pct">${pct}%</span>
@@ -318,20 +419,32 @@ async function predictSeries() {
         document.getElementById("result-series").innerHTML = `
 
             <div class="result-row">
-                <div class="result-card ${winnerIsA ? "winner" : ""}">
+
+                <div class="result-card ${winnerIsA ? "winner" : ""}"
+                     style="--team-color: ${colorA}">
+                    ${winnerIsA ? '<div class="winner-badge">▲ Predicted Winner</div>' : ""}
                     <h2>${displayA}</h2>
                     <div class="prob">${data.series_win_prob_a}%</div>
                     <div class="sim-count">Series win probability</div>
                 </div>
-                <div class="result-card ${!winnerIsA ? "winner" : ""}">
+
+                <div class="result-card ${!winnerIsA ? "winner" : ""}"
+                     style="--team-color: ${colorB}">
+                    ${!winnerIsA ? '<div class="winner-badge">▲ Predicted Winner</div>' : ""}
                     <h2>${displayB}</h2>
                     <div class="prob">${data.series_win_prob_b}%</div>
                     <div class="sim-count">Series win probability</div>
                 </div>
+
             </div>
 
             <div class="prob-bar-wrap">
-                ${buildProbBar(data.series_win_prob_a, data.series_win_prob_b)}
+                ${buildProbBar(
+                    data.series_win_prob_a,
+                    data.series_win_prob_b,
+                    displayA,
+                    displayB
+                )}
                 <div class="prob-bar-labels">
                     <span>${displayA}</span>
                     <span>${displayB}</span>
@@ -344,11 +457,13 @@ async function predictSeries() {
                     <div class="stat-badge-value">${data.expected_games}</div>
                 </div>
                 <div class="stat-badge">
-                    <div class="stat-badge-label">Per-Game Win % (${teamA.split(" ").slice(-1)[0]})</div>
+                    <div class="stat-badge-label">
+                        Per-Game Win % · ${teamA.split(" ").slice(-1)[0]}
+                    </div>
                     <div class="stat-badge-value">${data.game_win_prob_a}%</div>
                 </div>
                 <div class="stat-badge">
-                    <div class="stat-badge-label">Simulations Run</div>
+                    <div class="stat-badge-label">Simulations</div>
                     <div class="stat-badge-value">
                         ${data.total_simulations.toLocaleString()}
                     </div>
@@ -366,7 +481,7 @@ async function predictSeries() {
                 </div>
             </div>
 
-            <div class="factors">
+            <div class="factors" style="--winner-color: ${winnerColor}">
                 <h3>Why ${winnerShort} wins</h3>
                 ${buildFactorRows(data.top_factors)}
             </div>

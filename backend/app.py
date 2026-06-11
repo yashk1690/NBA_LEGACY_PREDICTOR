@@ -102,7 +102,8 @@ def predict_series():
 
         result = predict_playoff_series(
             data["team_a"],
-            data["team_b"]
+            data["team_b"],
+            model_id=int(data.get("model_id", 1))
         )
 
         return jsonify(result)

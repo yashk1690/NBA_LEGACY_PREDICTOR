@@ -22,15 +22,20 @@ profiles["DISPLAY_NAME"] = (
 )
 
 # ─────────────────────────────────────────
-# Load playoff model
+# Load playoff models
 # ─────────────────────────────────────────
 
 playoff_bundle = joblib.load(
     "models/nba_playoff_simulator.pkl"
 )
-
 playoff_model         = playoff_bundle["model"]
 playoff_feature_order = playoff_bundle["features"]
+
+playoff_bundle_2 = joblib.load(
+    "models/nba_playoff_simulator_2.pkl"
+)
+playoff_model_2         = playoff_bundle_2["model"]
+playoff_feature_order_2 = playoff_bundle_2["features"]
 
 playoff_profiles = pd.read_csv("data/playoff_team_profiles_v3.csv")
 
@@ -118,7 +123,7 @@ FEATURE_DISPLAY_NAMES = {
     "ts_pct_matchup_diff":               "True Shooting %"
 }
 
-# Lower value = better outcome for the team
+# Lower value = better for the team
 LOWER_IS_BETTER = {
     "drtg_matchup_diff",
     "tov_matchup_diff",
@@ -127,7 +132,7 @@ LOWER_IS_BETTER = {
     "opp_fg3_pct_matchup_diff"
 }
 
-# Stored as decimals; multiply ×100 to show as percentage points
+# Stored as decimals; multiply ×100 for percentage points
 PCT_FEATURES = {
     "fg_pct_matchup_diff",
     "opp_fg_pct_matchup_diff",
@@ -159,9 +164,8 @@ def build_feature_vector(team_a, team_b):
 
 def build_dynamic_feature_vector(team_a, team_b, feat_order):
     """
-    Playoff model — derives column name by stripping
-    '_matchup_diff', so it works with any extra features
-    the playoff model was trained on.
+    Playoff models — derives column name by stripping
+    '_matchup_diff', handles any extra features automatically.
     """
 
     features = {}
@@ -176,6 +180,31 @@ def build_dynamic_feature_vector(team_a, team_b, feat_order):
             features[feat] = 0.0
 
     return features
+
+
+# ─────────────────────────────────────────
+# Home-court bias correction
+# ─────────────────────────────────────────
+
+def get_neutral_prob(m, X):
+    """
+    The models carry a home-team bias from training data.
+    Fix: run the prediction both ways and average.
+
+      P(A wins | A listed first)   →  prob_ab
+      P(B wins | B listed first)   →  prob_ba
+      P(A wins | B listed first)   →  1 - prob_ba
+
+    Neutral P(A wins) = (prob_ab + (1 - prob_ba)) / 2
+
+    The reversed feature vector is simply X * -1, because
+    all features are (A - B) diffs; flipping gives (B - A).
+    """
+
+    prob_ab = float(m.predict_proba(X)[0, 1])
+    prob_ba = float(m.predict_proba(X * -1)[0, 1])
+
+    return (prob_ab + (1 - prob_ba)) / 2
 
 
 # ─────────────────────────────────────────
@@ -242,7 +271,7 @@ def get_top_factors(
 
 
 # ─────────────────────────────────────────
-# Single game prediction (10,000 simulations)
+# Single game (10,000 simulations)
 # ─────────────────────────────────────────
 
 def predict_matchup(
@@ -258,7 +287,8 @@ def predict_matchup(
 
     X = pd.DataFrame([feature_vector])[feature_order]
 
-    prob = float(model.predict_proba(X)[0, 1])
+    # Bias-corrected probability
+    prob = get_neutral_prob(model, X)
 
     # Monte-Carlo game simulations
     rng = np.random.default_rng()
@@ -273,8 +303,8 @@ def predict_matchup(
     return {
         "team_a":                 team_a_name,
         "team_b":                 team_b_name,
-        "team_a_win_probability": float(prob),
-        "team_b_win_probability": float(1 - prob),
+        "team_a_win_probability": prob,
+        "team_b_win_probability": 1 - prob,
         "team_a_sim_wins":        sim_wins_a,
         "team_b_sim_wins":        n_simulations - sim_wins_a,
         "total_simulations":      n_simulations,
@@ -284,31 +314,41 @@ def predict_matchup(
 
 
 # ─────────────────────────────────────────
-# Playoff series prediction (10,000 series)
+# Playoff series (10,000 series)
 # ─────────────────────────────────────────
 
 def predict_playoff_series(
     team_a_name,
     team_b_name,
+    model_id=1,
     n_simulations=10_000
 ):
+
+    # Select model by id
+    if model_id == 2:
+        m          = playoff_model_2
+        feat_order = playoff_feature_order_2
+    else:
+        m          = playoff_model
+        feat_order = playoff_feature_order
 
     team_a = get_playoff_team_profile(team_a_name)
     team_b = get_playoff_team_profile(team_b_name)
 
     feature_vector = build_dynamic_feature_vector(
-        team_a, team_b, playoff_feature_order
+        team_a, team_b, feat_order
     )
 
-    X = pd.DataFrame([feature_vector])[playoff_feature_order]
+    X = pd.DataFrame([feature_vector])[feat_order]
 
-    game_prob = float(playoff_model.predict_proba(X)[0, 1])
+    # Bias-corrected per-game probability
+    game_prob = get_neutral_prob(m, X)
 
     # ── Simulate 10,000 best-of-7 series ──────────────
 
     rng = np.random.default_rng()
 
-    series_wins_a = 0
+    series_wins_a  = 0
     length_counts  = {4: 0, 5: 0, 6: 0, 7: 0}
     outcome_counts = {}
 

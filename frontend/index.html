@@ -24,12 +24,14 @@
 
 <div class="container">
 
+    <!-- ── Single Game Panel ───────────────────── -->
+
     <div id="panel-single" class="panel active">
 
         <div class="selectors">
 
             <div class="team-picker">
-                <h3>Team A (Home)</h3>
+                <h3>Team A</h3>
                 <select id="yearA"></select>
                 <select id="teamA"></select>
             </div>
@@ -37,7 +39,7 @@
             <div class="vs">VS</div>
 
             <div class="team-picker">
-                <h3>Team B (Away)</h3>
+                <h3>Team B</h3>
                 <select id="yearB"></select>
                 <select id="teamB"></select>
             </div>
@@ -52,12 +54,14 @@
 
     </div>
 
+    <!-- ── Playoff Series Panel ─────────────────── -->
+
     <div id="panel-series" class="panel">
 
         <div class="selectors">
 
             <div class="team-picker">
-                <h3>Team A (Home)</h3>
+                <h3>Team A</h3>
                 <select id="playoffYearA"></select>
                 <select id="playoffTeamA"></select>
             </div>
@@ -65,16 +69,28 @@
             <div class="vs">VS</div>
 
             <div class="team-picker">
-                <h3>Team B (Away)</h3>
+                <h3>Team B</h3>
                 <select id="playoffYearB"></select>
                 <select id="playoffTeamB"></select>
             </div>
 
         </div>
 
-        <button id="btn-series-sim" onclick="predictSeries()">
-            Simulate Series
-        </button>
+        <div class="sim-controls">
+
+            <div class="model-selector">
+                <label>Model</label>
+                <select id="playoffModel">
+                    <option value="1">Playoff Simulator v1</option>
+                    <option value="2">Playoff Simulator v2</option>
+                </select>
+            </div>
+
+            <button id="btn-series-sim" onclick="predictSeries()">
+                Simulate Series
+            </button>
+
+        </div>
 
         <div id="result-series"></div>
 
