@@ -52,7 +52,7 @@ body::before {
     object-fit: cover;
     /* invert flips the light floor dark and makes the
        black court lines glow white — looks much better */
-    filter: grayscale(100%) invert(1) brightness(0.15) contrast(1);
+    filter: grayscale(100%)  brightness(0.15) contrast(1);
     display: block;
 }
 
