@@ -500,3 +500,151 @@ async function predictSeries() {
 
 loadTeams();
 loadPlayoffTeams();
+
+
+// ─────────────────────────────────────────
+// Similar Teams
+// ─────────────────────────────────────────
+
+let allClusterTeams = [];
+
+
+function filterSimilarTeams() {
+
+    const year       = document.getElementById("similarYear").value;
+    const validTeams = allClusterTeams
+        .filter(t => t.startsWith(year + " | "))
+        .map(t => t.split(" | ")[1])
+        .sort();
+
+    populateSelect("similarTeam", validTeams);
+}
+
+
+async function loadClusterTeams() {
+
+    const response    = await fetch(`${API}/cluster_teams`);
+    allClusterTeams   = await response.json();
+
+    const years = [
+        ...new Set(allClusterTeams.map(t => t.split(" | ")[0]))
+    ].sort().reverse();
+
+    populateSelect("similarYear", years);
+    filterSimilarTeams();
+
+    document.getElementById("similarYear")
+        .addEventListener("change", filterSimilarTeams);
+}
+
+
+async function findSimilar() {
+
+    const year = document.getElementById("similarYear").value;
+    const team = document.getElementById("similarTeam").value;
+    const display = `${year} | ${team}`;
+
+    const btn = document.getElementById("btn-similar-search");
+    btn.textContent = "Searching…";
+    btn.disabled    = true;
+
+    try {
+
+        const response = await fetch(`${API}/similar`, {
+            method:  "POST",
+            headers: { "Content-Type": "application/json" },
+            body:    JSON.stringify({ team: display, n: 10 })
+        });
+
+        if (!response.ok) {
+            const err = await response.json();
+            document.getElementById("result-similar").innerHTML =
+                `<p style="color:#C8102E; font-weight:900; text-transform:uppercase;">
+                    Error: ${err.error || "Something went wrong"}
+                </p>`;
+            return;
+        }
+
+        const data = await response.json();
+
+        // ── Query card ────────────────────────────────
+
+        const queryStats = [
+            { label: "ORTG",    value: data.ortg },
+            { label: "DRTG",    value: data.drtg },
+            { label: "PACE",    value: data.pace },
+            { label: "WIN %",   value: data.win_pct + "%" },
+        ];
+
+        const queryStatHTML = queryStats.map(s => `
+            <div class="q-stat">
+                <div class="q-stat-value">${s.value}</div>
+                <div class="q-stat-label">${s.label}</div>
+            </div>
+        `).join("");
+
+        // ── Similar cards ─────────────────────────────
+
+        const cardsHTML = data.similar_teams.map(t => {
+
+            const diffChips = t.stat_comparison.map(d => {
+                const arrow = d.diff > 0 ? "▲" : "▼";
+                const val   = Math.abs(d.diff);
+                return `<div class="diff-chip">
+                    ${d.stat}: <span>${arrow} ${val}</span>
+                </div>`;
+            }).join("");
+
+            return `
+                <div class="similar-card"
+                     style="--cluster-color: ${t.cluster_color}">
+                    <div class="similar-card-top">
+                        <div>
+                            <div class="similar-card-season">${t.season}</div>
+                            <div class="similar-card-name">${t.team_name}</div>
+                        </div>
+                        <div class="similarity-score">
+                            ${t.similarity}%
+                        </div>
+                    </div>
+                    <div class="similar-card-cluster">${t.cluster}</div>
+                    <div class="similar-card-diffs">${diffChips}</div>
+                </div>
+            `;
+        }).join("");
+
+        document.getElementById("result-similar").innerHTML = `
+
+            <div class="query-card"
+                 style="--cluster-color: ${data.cluster_color}">
+                <div class="query-card-left">
+                    <div class="query-card-season">${data.season}</div>
+                    <div class="query-card-name">${data.team_name}</div>
+                    <div class="cluster-badge"
+                         style="--cluster-color:${data.cluster_color}">
+                        ${data.cluster}
+                    </div>
+                    <div class="query-card-stats">
+                        ${queryStatHTML}
+                    </div>
+                </div>
+            </div>
+
+            <div class="similar-section-title">
+                10 Most Similar Teams · Ranked by Euclidean Distance
+            </div>
+
+            <div class="similar-grid">
+                ${cardsHTML}
+            </div>
+        `;
+
+    } finally {
+        btn.textContent = "Find Similar Teams";
+        btn.disabled    = false;
+    }
+}
+
+
+// add to init
+loadClusterTeams();

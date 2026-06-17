@@ -21,6 +21,11 @@ from predictor import (
     predict_playoff_series
 )
 
+from similarity import (
+    get_cluster_teams,
+    find_similar_teams
+)
+
 
 @app.route("/")
 def home():
@@ -52,6 +57,11 @@ def get_playoff_teams():
     )
 
     return jsonify(teams)
+
+
+@app.route("/cluster_teams")
+def cluster_teams():
+    return jsonify(get_cluster_teams())
 
 
 @app.route("/predict", methods=["POST"])
@@ -113,6 +123,30 @@ def predict_series():
 
     except Exception as e:
         return jsonify({"error": "Series prediction failed"}), 500
+
+
+@app.route("/similar", methods=["POST"])
+def similar():
+
+    try:
+
+        data = request.get_json()
+
+        if not data or "team" not in data:
+            return jsonify({"error": "Missing team"}), 400
+
+        result = find_similar_teams(
+            data["team"],
+            n=int(data.get("n", 10))
+        )
+
+        return jsonify(result)
+
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 404
+
+    except Exception as e:
+        return jsonify({"error": "Similarity search failed"}), 500
 
 
 if __name__ == "__main__":

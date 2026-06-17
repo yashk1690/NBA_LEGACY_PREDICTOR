@@ -25,6 +25,10 @@
                 onclick="switchTab('series')">
             Playoff Series
         </button>
+        <button class="tab-btn" id="btn-similar"
+                onclick="switchTab('similar')">
+            Similar Teams
+        </button>
     </div>
 </div>
 
@@ -119,6 +123,38 @@
         </div>
 
         <div id="result-series"></div>
+
+    </div>
+
+    <!-- ── Similar Teams Panel ───────────────────────── -->
+
+    <div id="panel-similar" class="panel">
+
+        <div class="panel-hero">
+            <img src="images/similar-hero.jpg" alt="">
+            <div class="panel-hero-content">
+                <span class="panel-hero-title">Similar Teams</span>
+                <span class="panel-hero-sub">
+                    K-Means Clustering · 5 Archetypes · Any Era
+                </span>
+            </div>
+        </div>
+
+        <div class="similar-search-row">
+
+            <div class="team-picker similar-picker">
+                <h3>Pick a Team</h3>
+                <select id="similarYear"></select>
+                <select id="similarTeam"></select>
+            </div>
+
+            <button id="btn-similar-search" onclick="findSimilar()">
+                Find Similar Teams
+            </button>
+
+        </div>
+
+        <div id="result-similar"></div>
 
     </div>
 
